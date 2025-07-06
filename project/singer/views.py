@@ -10,6 +10,7 @@ def singer_list(request):
         singers = Singer.objects.all()
         serializer = SingerSerializer(singers, many=True)
         return Response(serializer.data)
+    
     elif request.method == 'POST':
         serializer = SingerSerializer(data=request.data)
         if serializer.is_valid():
