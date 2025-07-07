@@ -1,6 +1,7 @@
 from django.db import models
 
 class Singer(models.Model):
+    name = models.CharField(max_length=100, default="가수 미지정")
     content = models.TextField()
     debut = models.DateField()
 
