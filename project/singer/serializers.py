@@ -2,20 +2,19 @@ from rest_framework import serializers
 from .models import *
 
 class SongSerializer(serializers.ModelSerializer):
+    singer = serializers.CharField(source='singer.name', read_only=True)
+
     class Meta:
         model = Song
         fields = '__all__'
-        
-        # 'singer'는 URL에서 전달받고 views.py에서 직접 지정해주므로,
-        # 클라이언트가 JSON으로 값을 보내지 않아도 되게끔 read_only 처리함
-        read_only_fields = ['singer']
+
 
 class SingerSerializer(serializers.ModelSerializer):
     songs = serializers.SerializerMethodField()
 
     class Meta:
         model = Singer
-        fields = ['id', 'content', 'debut', 'songs']
+        fields = ['id', 'name', 'content', 'debut', 'songs']
 
     def get_songs(self, obj):
         return SongSerializer(obj.songs.all(), many=True).data
