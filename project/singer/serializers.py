@@ -11,14 +11,22 @@ class SongSerializer(serializers.ModelSerializer):
 
 class SingerSerializer(serializers.ModelSerializer):
     songs = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
 
     class Meta:
         model = Singer
-        fields = ['id', 'name', 'content', 'debut', 'songs']
+        fields = ['id', 'name', 'content', 'debut', 'songs', 'tags']
 
     def get_songs(self, obj):
         return SongSerializer(obj.songs.all(), many=True).data
+    
+    def get_tags(self, obj):
+        return [tag.name for tag in obj.tags.all()]
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = '__all__'
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:

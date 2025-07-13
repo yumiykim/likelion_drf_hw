@@ -1,21 +1,35 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Singer, Song, Comment
-from .serializers import SingerSerializer, SongSerializer, CommentSerializer
+from .models import Singer, Song, Comment, Tag
+from .serializers import SingerSerializer, SongSerializer, CommentSerializer, TagSerializer
+
+
+def parse_tags_from_text(text):
+    return [word[1:] for word in text.split() if word.startswith("#")]
 
 @api_view(['GET', 'POST'])
 def singer_list(request):
     if request.method == 'GET':
-        singers = Singer.objects.all()
+        tag_name = request.GET.get('tag')
+        if tag_name:
+            singers = Singer.objects.filter(tags__name=tag_name)
+        else:
+            singers = Singer.objects.all()
         serializer = SingerSerializer(singers, many=True)
         return Response(serializer.data)
     
     elif request.method == 'POST':
+        content_text = request.data.get('content', '')
+        tag_names = parse_tags_from_text(content_text)
+
         serializer = SingerSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            singer = serializer.save()
+            for tag_name in tag_names:
+                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                singer.tags.add(tag_obj)
+            return Response(SingerSerializer(singer).data)
         return Response(serializer.errors)
 
 @api_view(['GET', 'PATCH', 'DELETE'])
@@ -29,10 +43,17 @@ def singer_detail(request, pk):
         return Response(SingerSerializer(singer).data)
 
     elif request.method == 'PATCH':
+        content_text = request.data.get('content', '')
+        tag_names = parse_tags_from_text(content_text)
+
         serializer = SingerSerializer(singer, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            updated_singer = serializer.save()
+            updated_singer.tags.clear()
+            for tag_name in tag_names:
+                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                updated_singer.tags.add(tag_obj)
+            return Response(SingerSerializer(updated_singer).data)
         return Response(serializer.errors)
 
     elif request.method == 'DELETE':
