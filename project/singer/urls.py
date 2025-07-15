@@ -8,4 +8,5 @@ urlpatterns = [
     path('songs/<int:singer_id>/create/', views.song_create, name='song_create'),
     path('comments/<int:song_id>/', views.comment_read_create, name='comment_read_create'),
     path('find_tag/<str:tags_name>/', views.find_tag, name='find_tag'),
+    path('singers/<int:singer_id>/images/', views.singer_add_images, name='singer_add_images'),
 ]
