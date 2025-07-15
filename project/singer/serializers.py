@@ -14,11 +14,15 @@ class SongSerializer(serializers.ModelSerializer):
         model = Song
         fields = '__all__'
 
+class SingerImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SingerImage
+        fields = ['id', 'image']
 
 class SingerSerializer(serializers.ModelSerializer):
     songs = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
-    image = serializers.ImageField(use_url=True, required=False)
+    images = SingerImageSerializer(many=True, read_only=True)
 
     def get_songs(self, obj):
         return SongSerializer(obj.songs.all(), many=True).data

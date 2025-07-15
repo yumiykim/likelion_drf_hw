@@ -1,8 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Singer, Song, Comment, Tag
-from .serializers import SingerSerializer, SongSerializer, CommentSerializer, TagSerializer
+from .models import *
+from .serializers import *
 
 '''
 def parse_tags_from_text(text):
@@ -66,6 +66,21 @@ def singer_detail_update_delete(request, singer_id):
     elif request.method == 'DELETE':
         singer.delete()
         return Response({'deleted_singer': singer_id})
+    
+
+@api_view(['POST'])
+def singer_add_images(request, singer_id):
+    singer = get_object_or_404(Singer, id=singer_id)
+    images = request.FILES.getlist('images')  # 다중이미지
+    created_images = []
+
+    for img in images:
+        img_obj = SingerImage.objects.create(singer=singer, image=img)
+        created_images.append(img_obj)
+
+    serializer = SingerImageSerializer(created_images, many=True)
+    return Response(serializer.data)
+
 
 # Song 생성
 @api_view(['POST'])
