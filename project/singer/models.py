@@ -2,10 +2,10 @@ from django.db import models
 import os
 
 def image_upload_path(instance, filename):
-    return os.path.join(str(instance.id), filename)
+    return f'{instance.pk}/{filename}'
 
 class Tag(models.Model):
-    name = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=50, unique=True)
 
 class Singer(models.Model):
     name = models.CharField(max_length=100, default="가수 미지정")

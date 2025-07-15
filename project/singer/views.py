@@ -1,96 +1,102 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Singer, Song, Comment, Tag
 from .serializers import SingerSerializer, SongSerializer, CommentSerializer, TagSerializer
 
-
+'''
 def parse_tags_from_text(text):
     return [word[1:] for word in text.split() if word.startswith("#")]
+'''
 
+# Singer 리스트 & 생성
 @api_view(['GET', 'POST'])
-def singer_list(request):
+def singer_list_create(request):
     if request.method == 'GET':
-        tag_name = request.GET.get('tag')
-        if tag_name:
-            singers = Singer.objects.filter(tags__name=tag_name)
-        else:
-            singers = Singer.objects.all()
+        singers = Singer.objects.all()
         serializer = SingerSerializer(singers, many=True)
-        return Response(serializer.data)
-    
+        return Response(data=serializer.data)
+
     elif request.method == 'POST':
-        content_text = request.data.get('content', '')
-        tag_names = parse_tags_from_text(content_text)
-
         serializer = SingerSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             singer = serializer.save()
-            for tag_name in tag_names:
-                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
-                singer.tags.add(tag_obj)
-            return Response(SingerSerializer(singer).data)
-        return Response(serializer.errors)
 
+            content = request.data.get('content', '')
+            tags = [word[1:] for word in content.split(' ') if word.startswith('#')]
+            for t in tags:
+                try:
+                    tag = get_object_or_404(Tag, name=t)
+                except:
+                    tag = Tag(name=t)
+                    tag.save()
+                singer.tags.add(tag)
+
+            singer.save()
+            return Response(data=SingerSerializer(singer).data)
+
+# Singer 상세조회, 수정, 삭제
 @api_view(['GET', 'PATCH', 'DELETE'])
-def singer_detail(request, pk):
-    try:
-        singer = Singer.objects.get(pk=pk)
-    except Singer.DoesNotExist:
-        return Response({'error': 'Not found'}, status=404)
+def singer_detail_update_delete(request, singer_id):
+    singer = get_object_or_404(Singer, id=singer_id)
 
     if request.method == 'GET':
-        return Response(SingerSerializer(singer).data)
+        serializer = SingerSerializer(singer)
+        return Response(data=serializer.data)
 
     elif request.method == 'PATCH':
-        content_text = request.data.get('content', '')
-        tag_names = parse_tags_from_text(content_text)
-
-        serializer = SingerSerializer(singer, data=request.data, partial=True)
-        if serializer.is_valid():
+        serializer = SingerSerializer(instance=singer, data=request.data, partial=True)
+        if serializer.is_valid(raise_exception=True):
             updated_singer = serializer.save()
+
             updated_singer.tags.clear()
-            for tag_name in tag_names:
-                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
-                updated_singer.tags.add(tag_obj)
-            return Response(SingerSerializer(updated_singer).data)
-        return Response(serializer.errors)
+            content = request.data.get('content', '')
+            tags = [word[1:] for word in content.split(' ') if word.startswith('#')]
+            for t in tags:
+                try:
+                    tag = get_object_or_404(Tag, name=t)
+                except:
+                    tag = Tag(name=t)
+                    tag.save()
+                updated_singer.tags.add(tag)
+
+            updated_singer.save()
+            return Response(data=SingerSerializer(updated_singer).data)
 
     elif request.method == 'DELETE':
         singer.delete()
-        return Response({'id': pk, 'deleted': True})
+        return Response({'deleted_singer': singer_id})
 
+# Song 생성
 @api_view(['POST'])
 def song_create(request, singer_id):
-    try:
-        singer = Singer.objects.get(pk=singer_id)
-    except Singer.DoesNotExist:
-        return Response({'error': 'Singer not found'}, status=404)
-
+    singer = get_object_or_404(Singer, id=singer_id)
     serializer = SongSerializer(data=request.data)
-    if serializer.is_valid():
+    if serializer.is_valid(raise_exception=True):
         serializer.save(singer=singer)
-        return Response(serializer.data)
-    return Response(serializer.errors)
+        return Response(data=serializer.data)
 
+# Comment 읽기 & 생성
+@api_view(['GET', 'POST'])
+def comment_read_create(request, song_id):
+    song = get_object_or_404(Song, id=song_id)
 
-@api_view(['POST'])
-def comment_create(request, song_id):
-    try:
-        song = Song.objects.get(pk=song_id)
-    except Song.DoesNotExist:
-        return Response({'error': 'Song not found'}, status=404)
+    if request.method == 'GET':
+        comments = Comment.objects.filter(song=song)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(data=serializer.data)
 
-    serializer = CommentSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(song=song)
-        return Response(serializer.data)
-    return Response(serializer.errors)
+    elif request.method == 'POST':
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(song=song)
+            return Response(data=serializer.data)
 
+# 태그 검색
 @api_view(['GET'])
-def comment_list(request, song_id):
-    comments = Comment.objects.filter(song__id=song_id)
-    serializer = CommentSerializer(comments, many=True)
-    return Response(serializer.data)
-
+def find_tag(request, tags_name):
+    tag = get_object_or_404(Tag, name=tags_name)
+    singers = Singer.objects.filter(tags__in=[tag])
+    serializer = SingerSerializer(singers, many=True)
+    return Response(data=serializer.data)
 

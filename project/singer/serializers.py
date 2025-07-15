@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from .models import *
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+
 class SongSerializer(serializers.ModelSerializer):
     singer = serializers.CharField(source='singer.name', read_only=True)
 
@@ -12,21 +18,19 @@ class SongSerializer(serializers.ModelSerializer):
 class SingerSerializer(serializers.ModelSerializer):
     songs = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Singer
-        fields = ['id', 'name', 'content', 'debut', 'songs', 'tags']
+    image = serializers.ImageField(use_url=True, required=False)
 
     def get_songs(self, obj):
         return SongSerializer(obj.songs.all(), many=True).data
     
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
-
-class TagSerializer(serializers.ModelSerializer):
+    
     class Meta:
-        model = Tag
+        model = Singer
+        # fields = ['id', 'name', 'content', 'debut', 'songs', 'tags']
         fields = '__all__'
+
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
